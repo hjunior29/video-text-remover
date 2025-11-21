@@ -1,5 +1,5 @@
 """
-Subtitle Remover for Replicate - Video Processing
+Video Text Remover for Replicate - Video Processing
 Detects and removes subtitles from videos using YOLO + Inpainting
 """
 
@@ -14,7 +14,7 @@ import subprocess
 import shutil
 
 class Predictor(BasePredictor):
-    """Subtitle detection and removal predictor for videos"""
+    """Video Text Remover detection and removal predictor for videos"""
 
     def setup(self):
         """Load ONNX model once when container starts"""
@@ -98,7 +98,7 @@ class Predictor(BasePredictor):
             description="Input video file with subtitles to remove. Supports MP4, AVI, MOV, and other common video formats.",
         ),
         method: str = Input(
-            description="Subtitle removal algorithm. 'hybrid' (recommended): Best quality using context-aware inpainting. 'inpaint': Fast TELEA inpainting. 'inpaint_ns': Navier-Stokes inpainting. 'blur': Gaussian blur. 'black': Fill with black. 'background': Fill with surrounding color.",
+            description="Video Text Remover removal algorithm. 'hybrid' (recommended): Best quality using context-aware inpainting. 'inpaint': Fast TELEA inpainting. 'inpaint_ns': Navier-Stokes inpainting. 'blur': Gaussian blur. 'black': Fill with black. 'background': Fill with surrounding color.",
             default="hybrid",
             choices=["hybrid", "inpaint", "inpaint_ns", "blur", "black", "background"],
         ),

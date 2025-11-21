@@ -1,4 +1,4 @@
-# Subtitle Remover
+# Video Text Remover
 
 AI-powered video subtitle removal using YOLO object detection and advanced inpainting techniques.
 
@@ -113,7 +113,7 @@ console.log(output);
 
 ```bash
 # Clone repository
-git clone https://github.com/yourusername/video-text-remover.git
+git clone https://github.com/hjunior29/video-text-remover.git
 cd video-text-remover
 
 # Install dependencies
@@ -536,8 +536,8 @@ Built with [Cog](https://github.com/replicate/cog) for easy deployment on [Repli
 
 ## Support and Contact
 
-- **Issues**: [GitHub Issues](https://github.com/yourusername/video-text-remover/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/video-text-remover/discussions)
+- **Issues**: [GitHub Issues](https://github.com/hjunior29/video-text-remover/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/hjunior29/video-text-remover/discussions)
 - **Replicate Model**: [hjunior29/video-text-remover](https://replicate.com/hjunior29/video-text-remover)
 
 ## Contributing
