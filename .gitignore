@@ -48,13 +48,17 @@ venv.bak/
 .env
 .env.local
 
-# Model files (usually large)
-models/
+# Model files (usually large) - but include ONNX models for deployment
+# models/
 *.pth
 *.pt
 *.ckpt
 *.safetensors
 *.bin
+
+# Include ONNX models (required for Replicate deployment)
+!models/
+!models/**/*.onnx
 
 # Output/Test files
 output/
