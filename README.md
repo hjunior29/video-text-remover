@@ -1,12 +1,12 @@
 # Video Text Remover
 
-AI-powered video subtitle removal using YOLO object detection and advanced inpainting techniques.
+AI-powered video text removal using YOLO object detection and advanced inpainting techniques.
 
 [![Replicate](https://replicate.com/hjunior29/video-text-remover/badge)](https://replicate.com/hjunior29/video-text-remover)
 
 ## Overview
 
-This model automatically detects and removes hardcoded subtitles from videos using a combination of YOLO (You Only Look Once) object detection and context-aware inpainting algorithms. It preserves video quality while seamlessly removing text overlays, making it ideal for content repurposing, localization, and accessibility improvements.
+This model automatically detects and removes hardcoded texts from videos using a combination of YOLO (You Only Look Once) object detection and context-aware inpainting algorithms. It preserves video quality while seamlessly removing text overlays, making it ideal for content repurposing, localization, and accessibility improvements.
 
 ### Example Results
 
@@ -29,7 +29,7 @@ This model automatically detects and removes hardcoded subtitles from videos usi
 
 ## Features
 
-- **AI-Powered Detection**: Uses a trained YOLO model to accurately identify subtitle regions
+- **AI-Powered Detection**: Uses a trained YOLO model to accurately identify text regions
 - **Multiple Removal Methods**: Choose from 6 different algorithms optimized for different use cases
 - **High Quality Output**: Maintains video quality with H.264 encoding and configurable quality settings
 - **Flexible Configuration**: Fine-tune detection sensitivity, region margins, and removal methods
@@ -52,7 +52,7 @@ import replicate
 output = replicate.run(
     "hjunior29/video-text-remover",
     input={
-        "video": open("video_with_subtitles.mp4", "rb"),
+        "video": open("video_with_texts.mp4", "rb"),
         "method": "hybrid",
         "conf_threshold": 0.25,
         "margin": 5
@@ -132,7 +132,7 @@ cog predict -i video=@input_video.mp4 -i method=hybrid
 ### `video` (required)
 - **Type**: Video file
 - **Supported formats**: MP4, AVI, MOV, and other common formats
-- **Description**: Input video containing hardcoded subtitles to remove
+- **Description**: Input video containing hardcoded texts to remove
 
 ### `method` (optional)
 - **Type**: String (choice)
@@ -141,20 +141,20 @@ cog predict -i video=@input_video.mp4 -i method=hybrid
   - `hybrid` ⭐ **Recommended**: Best quality using context-aware inpainting with expanded regions
   - `inpaint`: Fast TELEA (Fast Marching Method) inpainting
   - `inpaint_ns`: Navier-Stokes fluid dynamics-based inpainting
-  - `blur`: Gaussian blur over subtitle regions
-  - `black`: Fill subtitle regions with black pixels
+  - `blur`: Gaussian blur over text regions
+  - `black`: Fill text regions with black pixels
   - `background`: Fill with average surrounding color
-- **Description**: Algorithm used to remove detected subtitles
+- **Description**: Algorithm used to remove detected texts
 
 ### `conf_threshold` (optional)
 - **Type**: Float
 - **Range**: 0.0 - 1.0
 - **Default**: 0.25
-- **Description**: Detection confidence threshold. Lower values detect more subtitles but may include false positives. Higher values are more conservative.
+- **Description**: Detection confidence threshold. Lower values detect more texts but may include false positives. Higher values are more conservative.
 - **Recommendations**:
-  - 0.15-0.20: Detect faint or partially visible subtitles
+  - 0.15-0.20: Detect faint or partially visible texts
   - 0.25: Balanced (default)
-  - 0.35-0.50: Only detect very clear subtitles
+  - 0.35-0.50: Only detect very clear texts
 
 ### `iou_threshold` (optional)
 - **Type**: Float
@@ -167,16 +167,16 @@ cog predict -i video=@input_video.mp4 -i method=hybrid
 - **Type**: Integer
 - **Range**: 0 - 20 pixels
 - **Default**: 5
-- **Description**: Extra pixels to expand around detected subtitle regions. Ensures complete removal of text edges and shadows.
+- **Description**: Extra pixels to expand around detected text regions. Ensures complete removal of text edges and shadows.
 - **Recommendations**:
   - 0-3: Minimal expansion for precise removal
   - 5: Balanced (default)
-  - 10-20: Aggressive removal for subtitles with heavy shadows/outlines
+  - 10-20: Aggressive removal for texts with heavy shadows/outlines
 
 ## Common Use Cases
 
 ### 1. Content Localization
-Remove original language subtitles to add new translations:
+Remove original language texts to add new translations:
 ```python
 output = replicate.run(
     "hjunior29/video-text-remover",
@@ -190,7 +190,7 @@ output = replicate.run(
 ```
 
 ### 2. Social Media Content Repurposing
-Remove subtitles from viral videos for re-editing:
+Remove texts from viral videos for re-editing:
 ```python
 output = replicate.run(
     "hjunior29/video-text-remover",
@@ -204,14 +204,14 @@ output = replicate.run(
 ```
 
 ### 3. Accessibility Improvements
-Replace hardcoded subtitles with accessible closed captions:
+Replace hardcoded texts with accessible closed captions:
 ```python
 output = replicate.run(
     "hjunior29/video-text-remover",
     input={
         "video": video_file,
         "method": "hybrid",
-        "conf_threshold": 0.20,  # Lower threshold to catch all subtitle frames
+        "conf_threshold": 0.20,  # Lower threshold to catch all text frames
         "margin": 10  # Ensure complete removal
     }
 )
@@ -235,13 +235,13 @@ output = replicate.run(
 
 ### Architecture
 
-**Detection Model**: YOLOv8-based object detector (Fine-tuned for subtitle detection)
+**Detection Model**: YOLOv8-based object detector (Fine-tuned for text detection)
 - **Version**: YOLOv8s (Small) - Proven, stable architecture
-- **Training**: Custom-trained for subtitle and text overlay detection
+- **Training**: Custom-trained for text and text overlay detection
 - **Input**: Video frames (RGB, any resolution)
 - **Processing**: Frames resized to 640x640 with padding for inference
 - **Output**: Bounding boxes with confidence scores for text regions
-- **Advantages**: Reliable subtitle detection with high accuracy
+- **Advantages**: Reliable text detection with high accuracy
 - **Model Size**: 27 MB (ONNX format)
 
 **Removal Methods**:
@@ -263,7 +263,7 @@ output = replicate.run(
 
 4. **Gaussian Blur**:
    - 51x51 kernel, sigma=30
-   - Makes subtitles unreadable while preserving colors
+   - Makes texts unreadable while preserving colors
    - Fastest method, useful for previews
 
 5. **Black Fill**:
@@ -278,14 +278,14 @@ output = replicate.run(
 
 ### Training Data
 
-The YOLOv8 detection model was custom-trained for subtitle detection:
-- **Dataset**: Custom subtitle and text overlay dataset
-- **Text types**: Hardcoded video subtitles, captions, and on-screen text overlays
+The YOLOv8 detection model was custom-trained for text detection:
+- **Dataset**: Custom text and text overlay dataset
+- **Text types**: Hardcoded video texts, captions, and on-screen text overlays
 - **Fonts & Styles**: Various fonts, sizes, colors, and styling (bold, outlined, shadowed)
 - **Languages**: Multi-language support (Latin, Cyrillic, Asian characters, etc.)
 - **Backgrounds**: Diverse video content (movies, TV shows, social media, educational content)
 - **Positions**: Bottom-centered (most common), top, and custom positioned text
-- **Training Focus**: Optimized to detect complete subtitle blocks rather than individual characters
+- **Training Focus**: Optimized to detect complete text blocks rather than individual characters
 
 ### Performance Metrics
 
@@ -311,11 +311,11 @@ The YOLOv8 detection model was custom-trained for subtitle detection:
 
 ### ✅ Appropriate Uses
 
-- **Content Production**: Removing existing subtitles to add new translations or captions
+- **Content Production**: Removing existing texts to add new translations or captions
 - **Video Editing**: Cleaning footage for re-editing or remixing
-- **Accessibility**: Replacing hardcoded subtitles with proper closed captions
+- **Accessibility**: Replacing hardcoded texts with proper closed captions
 - **Archival**: Creating clean master copies of content
-- **Research**: Academic studies on video processing or subtitle analysis
+- **Research**: Academic studies on video processing or text analysis
 - **Personal Use**: Cleaning personal videos or home movies
 
 ### ⚠️ Out-of-Scope Uses
@@ -338,8 +338,8 @@ The YOLOv8 detection model was custom-trained for subtitle detection:
 2. **Inpainting Quality**:
    - Results vary based on background complexity
    - Complex patterns, faces, or detailed scenes may show artifacts
-   - Moving backgrounds during subtitle presence can cause inconsistencies
-   - Very large subtitle regions (>30% of frame) may show visible inpainting
+   - Moving backgrounds during text presence can cause inconsistencies
+   - Very large text regions (>30% of frame) may show visible inpainting
 
 3. **Processing Speed**:
    - CPU inference: 2-5 FPS typical
@@ -354,10 +354,10 @@ The YOLOv8 detection model was custom-trained for subtitle detection:
 
 ### Content Limitations
 
-- **Overlapping Content**: If subtitles overlap important visual elements, removal may damage those elements
+- **Overlapping Content**: If texts overlap important visual elements, removal may damage those elements
 - **Embedded Text**: Not designed to remove text that's part of the scene (signs, labels, etc.)
-- **Dynamic Positioning**: Subtitles that move/animate may be partially missed
-- **Transparency**: Semi-transparent subtitles may not be fully removed
+- **Dynamic Positioning**: Texts that move/animate may be partially missed
+- **Transparency**: Semi-transparent texts may not be fully removed
 
 ## Ethical Considerations
 
@@ -367,8 +367,8 @@ The YOLOv8 detection model was custom-trained for subtitle detection:
 - Users are responsible for ensuring they have rights to process uploaded content
 
 ### Fairness
-- Model trained on diverse subtitle styles and languages
-- May perform better on common subtitle styles (white text, black outline, bottom-centered)
+- Model trained on diverse text styles and languages
+- May perform better on common text styles (white text, black outline, bottom-centered)
 - Performance may vary across different video types and production qualities
 
 ### Responsible Use
@@ -379,14 +379,14 @@ The YOLOv8 detection model was custom-trained for subtitle detection:
 
 ## Troubleshooting
 
-### Subtitles Not Detected
+### Texts Not Detected
 
-**Problem**: Subtitles remain in the output video
+**Problem**: Texts remain in the output video
 
 **Solutions**:
 - Lower `conf_threshold` to 0.15-0.20 for more sensitive detection
-- Check if subtitles are actually closed captions (not hardcoded)
-- Ensure subtitles have sufficient contrast with background
+- Check if texts are actually closed captions (not hardcoded)
+- Ensure texts have sufficient contrast with background
 - Try processing a single frame to verify detection works
 
 ### Poor Inpainting Quality
@@ -401,11 +401,11 @@ The YOLOv8 detection model was custom-trained for subtitle detection:
 
 ### False Positives
 
-**Problem**: Non-subtitle text is being removed (signs, UI elements, etc.)
+**Problem**: Non-text text is being removed (signs, UI elements, etc.)
 
 **Solutions**:
 - Increase `conf_threshold` to 0.35-0.45 for more conservative detection
-- Model is trained specifically for subtitle-style text, but may occasionally detect other overlays
+- Model is trained specifically for text-style text, but may occasionally detect other overlays
 - Report persistent false positives for model improvement
 
 ### Processing Too Slow
@@ -434,7 +434,7 @@ The YOLOv8 detection model was custom-trained for subtitle detection:
 1. **Pre-processing**:
    - Convert input to MP4/H.264 format
    - Reduce resolution to 1080p or 720p if higher resolution not needed
-   - Trim video to only sections with subtitles
+   - Trim video to only sections with texts
 
 2. **Parameter Tuning**:
    - Start with default parameters
@@ -452,7 +452,7 @@ The YOLOv8 detection model was custom-trained for subtitle detection:
 {
   "status": "succeeded",
   "output": "https://replicate.delivery/pbxt/...",
-  "logs": "Processing video...\n✅ Frames processed: 379\n📝 Frames with subtitles: 245 (64.6%)\n🔍 Total subtitles removed: 312"
+  "logs": "Processing video...\n✅ Frames processed: 379\n📝 Frames with texts: 245 (64.6%)\n🔍 Total texts removed: 312"
 }
 ```
 
@@ -497,7 +497,7 @@ Additional system packages:
 
 ### Planned Features
 - Audio preservation in output video
-- Support for SRT/VTT subtitle removal (soft subtitles)
+- Support for SRT/VTT text removal (soft texts)
 - Real-time preview mode
 - Multi-language text detection improvements
 - Advanced inpainting with deep learning models
@@ -546,7 +546,7 @@ Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for gui
 Areas for contribution:
 - Additional inpainting methods
 - Performance optimizations
-- Support for more subtitle styles
+- Support for more text styles
 - Documentation improvements
 - Bug reports and fixes
 

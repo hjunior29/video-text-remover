@@ -1,6 +1,6 @@
 """
 Video Text Remover for Replicate - Video Processing
-Detects and removes subtitles from videos using YOLO + Inpainting
+Detects and removes hardcoded text overlays from videos using YOLO + Inpainting
 """
 
 from cog import BasePredictor, Input, Path
@@ -26,7 +26,7 @@ class Predictor(BasePredictor):
         print("=" * 60)
 
         # Check model file
-        model_path = "models/subtitle_detector/converted_best.onnx"
+        model_path = "models/text_detector/converted_best.onnx"
         print(f"Step 1/3: Checking model file...")
 
         if not os.path.exists(model_path):
@@ -95,7 +95,7 @@ class Predictor(BasePredictor):
     def predict(
         self,
         video: Path = Input(
-            description="Input video file with subtitles to remove. Supports MP4, AVI, MOV, and other common video formats.",
+            description="Input video file with hardcoded text to remove. Supports MP4, AVI, MOV, and other common video formats.",
         ),
         method: str = Input(
             description="Video Text Remover removal algorithm. 'hybrid' (recommended): Best quality using context-aware inpainting. 'inpaint': Fast TELEA inpainting. 'inpaint_ns': Navier-Stokes inpainting. 'blur': Gaussian blur. 'black': Fill with black. 'background': Fill with surrounding color.",
@@ -103,7 +103,7 @@ class Predictor(BasePredictor):
             choices=["hybrid", "inpaint", "inpaint_ns", "blur", "black", "background"],
         ),
         conf_threshold: float = Input(
-            description="Detection confidence threshold (0.0-1.0). Lower values detect more subtitles but may include false positives. Recommended: 0.25",
+            description="Detection confidence threshold (0.0-1.0). Lower values detect more text but may include false positives. Recommended: 0.25",
             default=0.25,
             ge=0.0,
             le=1.0,
@@ -115,16 +115,16 @@ class Predictor(BasePredictor):
             le=1.0,
         ),
         margin: int = Input(
-            description="Extra pixels to expand around detected subtitle regions (0-20). Higher values ensure complete removal but may remove more content. Recommended: 5",
+            description="Extra pixels to expand around detected text regions (0-20). Higher values ensure complete removal but may remove more content. Recommended: 5",
             default=5,
             ge=0,
             le=20,
         ),
     ) -> Path:
-        """Remove subtitles from video using AI detection and inpainting
+        """Remove hardcoded text from video using AI detection and inpainting
 
         Returns:
-            Path: Path to the processed video file with subtitles removed
+            Path: Path to the processed video file with text removed
         """
 
         print(f"\nProcessing video: {video}")
@@ -166,7 +166,7 @@ class Predictor(BasePredictor):
         print(f"\nProcessing frames...")
 
         # Process each frame
-        frames_with_subtitles = 0
+        frames_with_text = 0
         total_detections = 0
         frame_num = 0
 
@@ -176,17 +176,17 @@ class Predictor(BasePredictor):
                 if not ret:
                     break
 
-                # Detect subtitles
+                # Detect text
                 boxes = self._detect_onnx(frame, conf_threshold, iou_threshold)
 
                 # Update stats
                 if len(boxes) > 0:
-                    frames_with_subtitles += 1
+                    frames_with_text += 1
                     total_detections += len(boxes)
 
-                    # Remove subtitles
+                    # Remove text
                     for box in boxes:
-                        frame = self._remove_subtitle(frame, box, method, margin)
+                        frame = self._remove_text(frame, box, method, margin)
 
                 # Save frame as image
                 frame_path = frames_dir / f"frame_{frame_num:06d}.png"
@@ -196,7 +196,7 @@ class Predictor(BasePredictor):
                 # Progress reporting - log every 30 frames or at specific milestones
                 if frame_num % 30 == 0 or frame_num in [1, 10, 50, 100]:
                     progress = (frame_num / total_frames) * 100
-                    print(f"   Progress: {frame_num}/{total_frames} frames ({progress:.1f}%) - Subtitles detected in {frames_with_subtitles} frames")
+                    print(f"   Progress: {frame_num}/{total_frames} frames ({progress:.1f}%) - Text detected in {frames_with_text} frames")
 
         except Exception as e:
             # Cleanup on error
@@ -255,7 +255,7 @@ class Predictor(BasePredictor):
         # Stats
         print(f"\nRESULTS:")
         print(f"   - Frames processed: {total_frames}")
-        print(f"   - Frames with text: {frames_with_subtitles} ({100*frames_with_subtitles/total_frames:.1f}%)")
+        print(f"   - Frames with text: {frames_with_text} ({100*frames_with_text/total_frames:.1f}%)")
         print(f"   - Total text regions removed: {total_detections}")
         if total_frames > 0:
             print(f"   - Average detections per frame: {total_detections/total_frames:.2f}")
@@ -270,7 +270,7 @@ class Predictor(BasePredictor):
         conf_threshold: float,
         iou_threshold: float
     ) -> List[List[int]]:
-        """Detect subtitles using ONNX model"""
+        """Detect text overlays using ONNX model"""
         boxes = []
 
         try:
@@ -379,14 +379,14 @@ class Predictor(BasePredictor):
 
         return [boxes[i] for i in keep]
 
-    def _remove_subtitle(
+    def _remove_text(
         self,
         frame: np.ndarray,
         box: List[int],
         method: str,
         margin: int
     ) -> np.ndarray:
-        """Remove subtitle from frame using specified method"""
+        """Remove text from frame using specified method"""
         x1, y1, x2, y2 = self._expand_box(frame, box, margin)
 
         if method == "hybrid":
