@@ -56,10 +56,6 @@ venv.bak/
 *.safetensors
 *.bin
 
-# Include ONNX models (required for Replicate deployment)
-!models/
-!models/**/*.onnx
-
 # Output/Test files
 output/
 outputs/

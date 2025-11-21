@@ -22,22 +22,22 @@ class Predictor(BasePredictor):
         start_time = time.time()
 
         print("=" * 60)
-        print("🚀 STARTING SUBTITLE REMOVER SETUP V3")
+        print("STARTING VIDEO TEXT REMOVER SETUP")
         print("=" * 60)
 
         # Check model file
         model_path = "models/subtitle_detector/converted_best.onnx"
-        print(f"📦 Step 1/3: Checking model file...")
+        print(f"Step 1/3: Checking model file...")
 
         if not os.path.exists(model_path):
             raise FileNotFoundError(f"Model not found: {model_path}")
 
         model_size = os.path.getsize(model_path) / (1024 * 1024)
-        print(f"   ✓ Model found: {model_path}")
-        print(f"   ✓ Size: {model_size:.1f} MB")
+        print(f"   - Model found: {model_path}")
+        print(f"   - Size: {model_size:.1f} MB")
 
         # Configure providers (optimized for CPU)
-        print(f"\n🔧 Step 2/3: Configuring ONNX Runtime...")
+        print(f"\nStep 2/3: Configuring ONNX Runtime...")
 
         # Optimize session options for faster startup
         sess_options = ort.SessionOptions()
@@ -46,11 +46,11 @@ class Predictor(BasePredictor):
         sess_options.log_severity_level = 3  # Reduce logging
 
         providers = ['CPUExecutionProvider']
-        print(f"   ✓ Provider: CPU (optimized for startup)")
-        print(f"   ✓ Threads: 2 (faster initialization)")
+        print(f"   - Provider: CPU (optimized for startup)")
+        print(f"   - Threads: 2 (faster initialization)")
 
         # Load model
-        print(f"\n🧠 Step 3/3: Loading ONNX model...")
+        print(f"\nStep 3/3: Loading ONNX model...")
         load_start = time.time()
 
         self.ort_session = ort.InferenceSession(
@@ -60,7 +60,7 @@ class Predictor(BasePredictor):
         )
 
         load_time = time.time() - load_start
-        print(f"   ✓ Model loaded in {load_time:.2f}s")
+        print(f"   - Model loaded in {load_time:.2f}s")
 
         # Get model info
         inputs = self.ort_session.get_inputs()
@@ -72,12 +72,12 @@ class Predictor(BasePredictor):
         total_time = time.time() - start_time
 
         print("\n" + "=" * 60)
-        print("✅ SETUP COMPLETED SUCCESSFULLY!")
+        print("SETUP COMPLETED SUCCESSFULLY")
         print("=" * 60)
         print(f"   Total time: {total_time:.2f}s")
         print(f"   Input: {self.input_name}")
         print(f"   Outputs: {', '.join(self.output_names)}")
-        print(f"   Ready to process videos!")
+        print(f"   Ready to process videos")
         print("=" * 60 + "\n")
 
     def predict(
@@ -115,7 +115,7 @@ class Predictor(BasePredictor):
             Path: Path to the processed video file with subtitles removed
         """
 
-        print(f"\n🎬 Processing video: {video}")
+        print(f"\nProcessing video: {video}")
         print(f"   - Method: {method}")
         print(f"   - Confidence: {conf_threshold}")
         print(f"   - Margin: {margin}px")
@@ -140,7 +140,7 @@ class Predictor(BasePredictor):
             cap.release()
             raise ValueError(f"Invalid video properties. FPS: {fps}, Resolution: {width}x{height}, Frames: {total_frames}")
 
-        print(f"\n📹 Video info:")
+        print(f"\nVideo info:")
         print(f"   - Resolution: {width}x{height}")
         print(f"   - FPS: {fps:.2f}")
         print(f"   - Total frames: {total_frames}")
@@ -151,7 +151,7 @@ class Predictor(BasePredictor):
         frames_dir.mkdir(exist_ok=True)
         output_path = Path(tempfile.mkdtemp()) / "output.mp4"
 
-        print(f"\n🔄 Processing frames...")
+        print(f"\nProcessing frames...")
 
         # Process each frame
         frames_with_subtitles = 0
@@ -196,7 +196,7 @@ class Predictor(BasePredictor):
             # Always release video capture
             cap.release()
 
-        print(f"\n🎞️  Encoding video with FFmpeg...")
+        print(f"\nEncoding video with FFmpeg...")
 
         # Use FFmpeg to encode the video from frames
         try:
@@ -220,7 +220,7 @@ class Predictor(BasePredictor):
                 check=True
             )
 
-            print(f"   ✓ Video encoded successfully with H.264")
+            print(f"   - Video encoded successfully with H.264")
 
         except subprocess.CalledProcessError as e:
             # Cleanup on error
@@ -241,13 +241,13 @@ class Predictor(BasePredictor):
             raise RuntimeError("Output video file is empty")
 
         # Stats
-        print(f"\n📊 RESULTS:")
-        print(f"   ✅ Frames processed: {total_frames}")
-        print(f"   📝 Frames with subtitles: {frames_with_subtitles} ({100*frames_with_subtitles/total_frames:.1f}%)")
-        print(f"   🔍 Total subtitles removed: {total_detections}")
+        print(f"\nRESULTS:")
+        print(f"   - Frames processed: {total_frames}")
+        print(f"   - Frames with text: {frames_with_subtitles} ({100*frames_with_subtitles/total_frames:.1f}%)")
+        print(f"   - Total text regions removed: {total_detections}")
         if total_frames > 0:
-            print(f"   📊 Average detections per frame: {total_detections/total_frames:.2f}")
-        print(f"\n💾 Output: {output_path}")
+            print(f"   - Average detections per frame: {total_detections/total_frames:.2f}")
+        print(f"\nOutput: {output_path}")
         print(f"   Size: {output_size / 1024 / 1024:.2f} MB")
 
         return output_path
@@ -325,7 +325,7 @@ class Predictor(BasePredictor):
                 boxes = self._apply_nms(boxes, iou_threshold)
 
         except Exception as e:
-            print(f"❌ Detection error: {e}")
+            print(f"Detection error: {e}")
 
         return boxes
 

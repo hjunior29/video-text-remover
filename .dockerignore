@@ -32,20 +32,3 @@ examples/
 # Git
 .git/
 .gitignore
-
-# Local scripts
-local_scripts/
-
-# Reports and summaries
-*.txt
-CLEANUP_REPORT.md
-PROJECT_STRUCTURE.md
-START_HERE.md
-TECHNICAL.md
-
-# IMPORTANT: Include model files (required for prediction)
-!models/
-!models/**/*.onnx
-
-# Local files
-local/
