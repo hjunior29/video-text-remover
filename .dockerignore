@@ -1,0 +1,51 @@
+# Python virtual environment
+venv/
+env/
+.venv/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# macOS
+.DS_Store
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Documentation
+docs/
+archived_docs/
+examples/
+*.md
+
+# Git
+.git/
+.gitignore
+
+# Local scripts
+local_scripts/
+
+# Reports and summaries
+*.txt
+CLEANUP_REPORT.md
+PROJECT_STRUCTURE.md
+START_HERE.md
+TECHNICAL.md
+
+# IMPORTANT: Include model files (required for prediction)
+!models/
+!models/**/*.onnx
+
+# Local files
+local/

@@ -1,0 +1,18 @@
+image: r8.im/hjunior29/video-text-remover
+
+build:
+  gpu: true
+
+  python_version: "3.12"
+
+  system_packages:
+    - "libglib2.0-0"
+    - "libsm6"
+    - "libxext6"
+    - "libxrender-dev"
+    - "libgomp1"
+    - "ffmpeg"
+
+  python_requirements: requirements.txt
+
+predict: "predict.py:Predictor"
