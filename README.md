@@ -3,6 +3,7 @@
 AI-powered video text removal using YOLO object detection and advanced inpainting techniques.
 
 [![Replicate](https://replicate.com/hjunior29/video-text-remover/badge)](https://replicate.com/hjunior29/video-text-remover)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## Overview
 
@@ -506,9 +507,9 @@ Additional system packages:
 
 ### Technologies Used
 
-- **YOLO11**: Ultralytics YOLO for object detection
-  - Jocher, G., & Qiu, J. (2024). Ultralytics YOLO11 (Version 11.0.0) [Software]. https://github.com/ultralytics/ultralytics
-  - Latest iteration with enhanced feature extraction, optimized efficiency, and 22% fewer parameters than YOLOv8
+- **YOLOv8**: Ultralytics YOLO for object detection
+  - Jocher, G., Chaurasia, A., & Qiu, J. (2023). Ultralytics YOLOv8 (Version 8.0.0) [Software]. https://github.com/ultralytics/ultralytics
+  - Proven, stable architecture custom-trained for text overlay detection
 
 - **OpenCV**: Computer vision and inpainting algorithms
   - Bradski, G. (2000). The OpenCV Library. Dr. Dobb's Journal of Software Tools.
@@ -529,7 +530,7 @@ Additional system packages:
 
 ### Development
 
-Developed by [Helder Junior](https://github.com/hjunior29) for Fanomix
+Developed by [Helder Lima](https://github.com/hjunior29)
 
 Built with [Cog](https://github.com/replicate/cog) for easy deployment on [Replicate](https://replicate.com)
 
@@ -553,3 +554,15 @@ Areas for contribution:
 ---
 
 **⚠️ Important**: This tool is provided for legitimate video editing and content creation purposes. Users are responsible for ensuring they have appropriate rights and permissions for any content they process. Do not use this tool to violate copyright, remove mandatory attributions, or create misleading content.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+**MIT License Summary:**
+- ✅ Commercial use allowed
+- ✅ Modification allowed
+- ✅ Distribution allowed
+- ✅ Private use allowed
+- ⚠️ Liability and warranty disclaimers apply
+
