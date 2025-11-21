@@ -235,10 +235,13 @@ output = replicate.run(
 
 ### Architecture
 
-**Detection Model**: YOLOv8-based object detector
+**Detection Model**: YOLO11-based object detector
+- **Version**: YOLO11s (Small) - Latest Ultralytics YOLO iteration
 - **Input**: Video frames (RGB, any resolution)
 - **Processing**: Frames resized to 640x640 with padding for inference
-- **Output**: Bounding boxes with confidence scores for subtitle regions
+- **Output**: Bounding boxes with confidence scores for text regions
+- **Advantages**: 22% fewer parameters than YOLOv8 with improved accuracy and speed
+- **Model Size**: 36.3 MB (ONNX format)
 
 **Removal Methods**:
 1. **Hybrid Inpainting** (Recommended):
@@ -290,9 +293,11 @@ The YOLO detection model was trained on a custom dataset of:
 ### Model Format
 
 - **Framework**: ONNX Runtime (CPU optimized)
-- **File Size**: ~6.2 MB
+- **File Size**: 36.3 MB
+- **Parameters**: 9.4M
 - **Input Shape**: [1, 3, 640, 640] (NCHW format)
 - **Output Shape**: Variable (depends on detections)
+- **FLOPs**: 21.5 GFLOPs
 
 ## Intended Uses
 
@@ -471,12 +476,13 @@ Additional system packages:
 
 ## Version History
 
-### Current Version (v1.0.0)
-- Initial release with YOLO-based detection
+### Current Version (v1.1.0)
+- YOLO11s detection model (22% fewer parameters than YOLOv8)
 - 6 removal methods (hybrid, inpaint, inpaint_ns, blur, black, background)
 - Optimized CPU inference with ONNX Runtime
 - H.264 encoding with configurable quality
 - Comprehensive API with parameter validation
+- Clean logs without emojis
 
 ### Planned Features
 - GPU acceleration for faster processing
@@ -490,8 +496,9 @@ Additional system packages:
 
 ### Technologies Used
 
-- **YOLOv8**: Ultralytics YOLO for object detection
-  - Jocher, G., Chaurasia, A., & Qiu, J. (2023). Ultralytics YOLO (Version 8.0.0) [Software]. https://github.com/ultralytics/ultralytics
+- **YOLO11**: Ultralytics YOLO for object detection
+  - Jocher, G., & Qiu, J. (2024). Ultralytics YOLO11 (Version 11.0.0) [Software]. https://github.com/ultralytics/ultralytics
+  - Latest iteration with enhanced feature extraction, optimized efficiency, and 22% fewer parameters than YOLOv8
 
 - **OpenCV**: Computer vision and inpainting algorithms
   - Bradski, G. (2000). The OpenCV Library. Dr. Dobb's Journal of Software Tools.
