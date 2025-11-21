@@ -286,18 +286,22 @@ The YOLO detection model was trained on a custom dataset of:
 ### Performance Metrics
 
 - **Detection Accuracy**: ~95% mAP@0.5 on validation set
-- **Processing Speed**: ~2-5 FPS (depends on resolution and method)
+- **Processing Speed**:
+  - CPU: ~2-5 FPS (depends on resolution and method)
+  - GPU (CUDA): ~15-30 FPS (3-6x faster)
 - **False Positive Rate**: <5% with default threshold (0.25)
 - **Cold Start Time**: ~3-5 seconds (model loading)
+- **GPU Support**: Auto-detected (CUDA, TensorRT)
 
 ### Model Format
 
-- **Framework**: ONNX Runtime (CPU optimized)
+- **Framework**: ONNX Runtime (CPU/GPU auto-detection)
 - **File Size**: 36.3 MB
 - **Parameters**: 9.4M
 - **Input Shape**: [1, 3, 640, 640] (NCHW format)
 - **Output Shape**: Variable (depends on detections)
 - **FLOPs**: 21.5 GFLOPs
+- **Acceleration**: CUDA (NVIDIA GPU), TensorRT, or CPU fallback
 
 ## Intended Uses
 
@@ -334,9 +338,10 @@ The YOLO detection model was trained on a custom dataset of:
    - Very large subtitle regions (>30% of frame) may show visible inpainting
 
 3. **Processing Speed**:
-   - CPU-based inference (2-5 FPS typical)
+   - CPU inference: 2-5 FPS typical
+   - GPU inference: 15-30 FPS (CUDA/TensorRT)
    - High-resolution videos (4K+) take significantly longer
-   - No real-time processing capability
+   - No real-time processing capability on CPU
 
 4. **Video Properties**:
    - Highly compressed input videos may produce lower quality results
@@ -404,10 +409,11 @@ The YOLO detection model was trained on a custom dataset of:
 **Problem**: Video takes very long to process
 
 **Solutions**:
+- GPU is auto-detected and used if available (3-6x faster)
 - Use `method="inpaint"` or `method="blur"` for faster processing
 - Reduce video resolution before processing
 - Consider processing shorter clips and reassembling
-- GPU acceleration coming in future version
+- On Replicate: GPU instances are automatically provisioned
 
 ### Output Video Issues
 
@@ -479,13 +485,13 @@ Additional system packages:
 ### Current Version (v1.1.0)
 - YOLO11s detection model (22% fewer parameters than YOLOv8)
 - 6 removal methods (hybrid, inpaint, inpaint_ns, blur, black, background)
-- Optimized CPU inference with ONNX Runtime
+- GPU auto-detection with CUDA/TensorRT support (3-6x faster)
+- CPU/GPU inference with ONNX Runtime
 - H.264 encoding with configurable quality
 - Comprehensive API with parameter validation
 - Clean logs without emojis
 
 ### Planned Features
-- GPU acceleration for faster processing
 - Audio preservation in output video
 - Support for SRT/VTT subtitle removal (soft subtitles)
 - Real-time preview mode

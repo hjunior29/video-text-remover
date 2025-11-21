@@ -36,7 +36,7 @@ class Predictor(BasePredictor):
         print(f"   - Model found: {model_path}")
         print(f"   - Size: {model_size:.1f} MB")
 
-        # Configure providers (optimized for CPU)
+        # Configure providers (auto-detect GPU/CPU)
         print(f"\nStep 2/3: Configuring ONNX Runtime...")
 
         # Optimize session options for faster startup
@@ -45,9 +45,21 @@ class Predictor(BasePredictor):
         sess_options.intra_op_num_threads = 2  # Limit threads for faster startup
         sess_options.log_severity_level = 3  # Reduce logging
 
-        providers = ['CPUExecutionProvider']
-        print(f"   - Provider: CPU (optimized for startup)")
+        # Auto-detect available providers (GPU first, then CPU fallback)
+        available_providers = ort.get_available_providers()
+
+        if 'CUDAExecutionProvider' in available_providers:
+            providers = ['CUDAExecutionProvider', 'CPUExecutionProvider']
+            print(f"   - Provider: CUDA GPU (NVIDIA)")
+        elif 'TensorrtExecutionProvider' in available_providers:
+            providers = ['TensorrtExecutionProvider', 'CUDAExecutionProvider', 'CPUExecutionProvider']
+            print(f"   - Provider: TensorRT GPU (optimized)")
+        else:
+            providers = ['CPUExecutionProvider']
+            print(f"   - Provider: CPU")
+
         print(f"   - Threads: 2 (faster initialization)")
+        print(f"   - Available providers: {', '.join(available_providers)}")
 
         # Load model
         print(f"\nStep 3/3: Loading ONNX model...")
