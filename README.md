@@ -235,13 +235,14 @@ output = replicate.run(
 
 ### Architecture
 
-**Detection Model**: YOLO11-based object detector
+**Detection Model**: YOLO11-based object detector (Fine-tuned for text detection)
 - **Version**: YOLO11s (Small) - Latest Ultralytics YOLO iteration
+- **Training**: Fine-tuned on Roboflow text detection dataset (text-detection-jqlql)
 - **Input**: Video frames (RGB, any resolution)
 - **Processing**: Frames resized to 640x640 with padding for inference
 - **Output**: Bounding boxes with confidence scores for text regions
 - **Advantages**: 22% fewer parameters than YOLOv8 with improved accuracy and speed
-- **Model Size**: 36.3 MB (ONNX format)
+- **Model Size**: 37 MB (ONNX format)
 
 **Removal Methods**:
 1. **Hybrid Inpainting** (Recommended):
@@ -277,11 +278,14 @@ output = replicate.run(
 
 ### Training Data
 
-The YOLO detection model was trained on a custom dataset of:
-- **Subtitle types**: Hardcoded video subtitles in various fonts, sizes, and styles
+The YOLO11 detection model was fine-tuned on the Roboflow Universe text detection dataset:
+- **Dataset**: text-detection-jqlql (Roboflow Universe)
+- **License**: CC BY 4.0
+- **Text types**: Hardcoded text overlays, subtitles, captions, and on-screen text
+- **Fonts & Styles**: Various fonts, sizes, colors, and styling (bold, outlined, shadowed)
 - **Languages**: Multi-language support (Latin, Cyrillic, Asian characters, etc.)
 - **Backgrounds**: Diverse video content (movies, TV shows, social media, educational content)
-- **Positions**: Bottom-centered (most common), top, and custom positioned subtitles
+- **Positions**: Bottom-centered (most common), top, and custom positioned text
 
 ### Performance Metrics
 
@@ -296,12 +300,13 @@ The YOLO detection model was trained on a custom dataset of:
 ### Model Format
 
 - **Framework**: ONNX Runtime (CPU/GPU auto-detection)
-- **File Size**: 36.3 MB
-- **Parameters**: 9.4M
-- **Input Shape**: [1, 3, 640, 640] (NCHW format)
+- **File Size**: 37 MB
+- **Parameters**: ~9.4M (YOLO11s architecture)
+- **Input Shape**: [batch, 3, height, width] (dynamic, NCHW format)
 - **Output Shape**: Variable (depends on detections)
-- **FLOPs**: 21.5 GFLOPs
+- **FLOPs**: ~21.5 GFLOPs
 - **Acceleration**: CUDA (NVIDIA GPU), TensorRT, or CPU fallback
+- **Training**: Google Colab with T4/A100 GPU (~1-2 hours)
 
 ## Intended Uses
 
