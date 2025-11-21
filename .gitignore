@@ -62,6 +62,7 @@ outputs/
 results/
 temp/
 tmp/
+local/
 
 # Logs
 *.log
@@ -73,10 +74,3 @@ logs/
 htmlcov/
 .tox/
 .nox/
-
-# Documentation builds
-docs/_build/
-
-# Local files
-
-local/
