@@ -235,14 +235,14 @@ output = replicate.run(
 
 ### Architecture
 
-**Detection Model**: YOLO11-based object detector (Fine-tuned for text detection)
-- **Version**: YOLO11s (Small) - Latest Ultralytics YOLO iteration
-- **Training**: Fine-tuned on Roboflow text detection dataset (text-detection-jqlql)
+**Detection Model**: YOLOv8-based object detector (Fine-tuned for subtitle detection)
+- **Version**: YOLOv8s (Small) - Proven, stable architecture
+- **Training**: Custom-trained for subtitle and text overlay detection
 - **Input**: Video frames (RGB, any resolution)
 - **Processing**: Frames resized to 640x640 with padding for inference
 - **Output**: Bounding boxes with confidence scores for text regions
-- **Advantages**: 22% fewer parameters than YOLOv8 with improved accuracy and speed
-- **Model Size**: 37 MB (ONNX format)
+- **Advantages**: Reliable subtitle detection with high accuracy
+- **Model Size**: 27 MB (ONNX format)
 
 **Removal Methods**:
 1. **Hybrid Inpainting** (Recommended):
@@ -278,14 +278,14 @@ output = replicate.run(
 
 ### Training Data
 
-The YOLO11 detection model was fine-tuned on the Roboflow Universe text detection dataset:
-- **Dataset**: text-detection-jqlql (Roboflow Universe)
-- **License**: CC BY 4.0
-- **Text types**: Hardcoded text overlays, subtitles, captions, and on-screen text
+The YOLOv8 detection model was custom-trained for subtitle detection:
+- **Dataset**: Custom subtitle and text overlay dataset
+- **Text types**: Hardcoded video subtitles, captions, and on-screen text overlays
 - **Fonts & Styles**: Various fonts, sizes, colors, and styling (bold, outlined, shadowed)
 - **Languages**: Multi-language support (Latin, Cyrillic, Asian characters, etc.)
 - **Backgrounds**: Diverse video content (movies, TV shows, social media, educational content)
 - **Positions**: Bottom-centered (most common), top, and custom positioned text
+- **Training Focus**: Optimized to detect complete subtitle blocks rather than individual characters
 
 ### Performance Metrics
 
@@ -300,13 +300,12 @@ The YOLO11 detection model was fine-tuned on the Roboflow Universe text detectio
 ### Model Format
 
 - **Framework**: ONNX Runtime (CPU/GPU auto-detection)
-- **File Size**: 37 MB
-- **Parameters**: ~9.4M (YOLO11s architecture)
+- **File Size**: 27 MB
+- **Parameters**: ~9M (YOLOv8s architecture)
 - **Input Shape**: [batch, 3, height, width] (dynamic, NCHW format)
 - **Output Shape**: Variable (depends on detections)
-- **FLOPs**: ~21.5 GFLOPs
 - **Acceleration**: CUDA (NVIDIA GPU), TensorRT, or CPU fallback
-- **Training**: Google Colab with T4/A100 GPU (~1-2 hours)
+- **Optimizations**: Quantization-ready, dynamic batching support
 
 ## Intended Uses
 
