@@ -255,12 +255,25 @@ class Predictor(BasePredictor):
                 if not ret:
                     # Process remaining frames in buffer
                     if frame_buffer:
-                        self._process_frame_batch(
-                            frame_buffer, boxes_buffer, ffmpeg_process,
-                            method, margin, scale_factor,
-                            frames_with_text, total_detections,
-                            inpainting_time, io_time
-                        )
+                        for buf_frame, buf_boxes in zip(frame_buffer, boxes_buffer):
+                            # Update stats
+                            if len(buf_boxes) > 0:
+                                frames_with_text += 1
+                                total_detections += len(buf_boxes)
+
+                                # Remove text with optimized inpainting
+                                t2 = time.time()
+                                for box in buf_boxes:
+                                    buf_frame = self._remove_text_optimized(buf_frame, box, method, margin)
+                                inpainting_time += time.time() - t2
+
+                            # Write frame directly to FFmpeg pipe
+                            t3 = time.time()
+                            try:
+                                ffmpeg_process.stdin.write(buf_frame.tobytes())
+                            except BrokenPipeError:
+                                raise RuntimeError("FFmpeg pipe broken - encoding failed")
+                            io_time += time.time() - t3
                     break
 
                 frame_buffer.append(frame)
