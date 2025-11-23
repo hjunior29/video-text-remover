@@ -174,60 +174,29 @@ class Predictor(BasePredictor):
             while cap.isOpened():
                 ret, frame = cap.read()
                 if not ret:
-                    # Process remaining frames in buffer
-                    if frame_buffer:
-                        for buf_frame, buf_boxes in zip(frame_buffer, boxes_buffer):
-                            # Update stats
-                            if len(buf_boxes) > 0:
-                                frames_with_text += 1
-                                total_detections += len(buf_boxes)
-
-                                # Remove text with optimized inpainting
-                                t2 = time.time()
-                                for box in buf_boxes:
-                                    buf_frame = self._remove_text_optimized(buf_frame, box, method, margin)
-                                inpainting_time += time.time() - t2
-
-                            # Write frame directly to FFmpeg pipe
-                            t3 = time.time()
-                            try:
-                                ffmpeg_process.stdin.write(buf_frame.tobytes())
-                            except BrokenPipeError:
-                                raise RuntimeError("FFmpeg pipe broken - encoding failed")
-                            io_time += time.time() - t3
                     break
 
                 # Detect text
                 boxes = self._detect_onnx(frame, conf_threshold, iou_threshold)
-
-                boxes_buffer.append(boxes)
                 frame_num += 1
 
-                # Process batch when buffer is full or at end
-                if len(frame_buffer) >= BATCH_SIZE:
-                    # Process all frames in buffer
-                    for buf_frame, buf_boxes in zip(frame_buffer, boxes_buffer):
-                        # Update stats
-                        if len(buf_boxes) > 0:
-                            frames_with_text += 1
-                            total_detections += len(buf_boxes)
+                # Update stats
+                if len(boxes) > 0:
+                    frames_with_text += 1
+                    total_detections += len(boxes)
 
-                    # Remove text
-                    for box in boxes:
-                        frame = self._remove_text(frame, box, method, margin)
+                # Remove text
+                for box in boxes:
+                    frame = self._remove_text(frame, box, method, margin)
 
                 # Save frame as image
                 frame_path = frames_dir / f"frame_{frame_num:06d}.png"
                 cv2.imwrite(str(frame_path), frame)
 
-                    # Progress reporting
-                    if frame_num % 30 == 0 or frame_num in [1, 10, 50, 100]:
-                        progress = (frame_num / total_frames) * 100
-                        print(f"   Progress: {frame_num}/{total_frames} frames ({progress:.1f}%) - Text detected in {frames_with_text} frames")
-
-                    # Clear buffers
-                    frame_buffer = []
-                    boxes_buffer = []
+                # Progress reporting
+                if frame_num % 30 == 0 or frame_num in [1, 10, 50, 100]:
+                    progress = (frame_num / total_frames) * 100
+                    print(f"   Progress: {frame_num}/{total_frames} frames ({progress:.1f}%) - Text detected in {frames_with_text} frames")
 
         except Exception as e:
             # Cleanup on error
