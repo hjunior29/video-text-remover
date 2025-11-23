@@ -27,7 +27,7 @@ class Predictor(BasePredictor):
 
         # Check model file
         model_path = "models/text_detector/converted_best.onnx"
-        print(f"Step 1/4: Checking model file...")
+        print(f"Step 1/3: Checking model file...")
 
         if not os.path.exists(model_path):
             raise FileNotFoundError(f"Model not found: {model_path}")
@@ -37,40 +37,32 @@ class Predictor(BasePredictor):
         print(f"   - Size: {model_size:.1f} MB")
 
         # Configure providers (auto-detect GPU/CPU)
-        print(f"\nStep 2/4: Configuring ONNX Runtime...")
+        print(f"\nStep 2/3: Configuring ONNX Runtime...")
 
-        # Optimize session options
+        # Optimize session options for faster startup
         sess_options = ort.SessionOptions()
-        sess_options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
+        sess_options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_BASIC
+        sess_options.intra_op_num_threads = 2  # Limit threads for faster startup
         sess_options.log_severity_level = 3  # Reduce logging
 
         # Auto-detect available providers (GPU first, then CPU fallback)
         available_providers = ort.get_available_providers()
 
         if 'CUDAExecutionProvider' in available_providers:
-            providers = [
-                ('CUDAExecutionProvider', {
-                    'device_id': 0,
-                    'arena_extend_strategy': 'kNextPowerOfTwo',
-                    'gpu_mem_limit': 4 * 1024 * 1024 * 1024,  # 4GB
-                    'cudnn_conv_algo_search': 'EXHAUSTIVE',
-                }),
-                'CPUExecutionProvider'
-            ]
+            providers = ['CUDAExecutionProvider', 'CPUExecutionProvider']
             print(f"   - Provider: CUDA GPU (NVIDIA)")
         elif 'TensorrtExecutionProvider' in available_providers:
             providers = ['TensorrtExecutionProvider', 'CUDAExecutionProvider', 'CPUExecutionProvider']
             print(f"   - Provider: TensorRT GPU (optimized)")
         else:
             providers = ['CPUExecutionProvider']
-            sess_options.intra_op_num_threads = 4
-            sess_options.inter_op_num_threads = 4
-            print(f"   - Provider: CPU (4 threads)")
+            print(f"   - Provider: CPU")
 
+        print(f"   - Threads: 2 (faster initialization)")
         print(f"   - Available providers: {', '.join(available_providers)}")
 
         # Load model
-        print(f"\nStep 3/4: Loading ONNX model...")
+        print(f"\nStep 3/3: Loading ONNX model...")
         load_start = time.time()
 
         self.ort_session = ort.InferenceSession(
@@ -88,26 +80,6 @@ class Predictor(BasePredictor):
 
         self.input_name = inputs[0].name if inputs else None
         self.output_names = [output.name for output in outputs] if outputs else []
-
-        # GPU Diagnostics
-        print(f"\nStep 4/4: GPU Diagnostics...")
-        actual_providers = self.ort_session.get_providers()
-        print(f"   - Active providers: {', '.join(actual_providers)}")
-
-        if 'CUDAExecutionProvider' in actual_providers:
-            print(f"   - GPU acceleration: ENABLED")
-        else:
-            print(f"   - GPU acceleration: DISABLED (using CPU)")
-
-        # Check OpenCV CUDA support
-        try:
-            cuda_devices = cv2.cuda.getCudaEnabledDeviceCount()
-            if cuda_devices > 0:
-                print(f"   - OpenCV CUDA: Available ({cuda_devices} device(s))")
-            else:
-                print(f"   - OpenCV CUDA: Not available")
-        except:
-            print(f"   - OpenCV CUDA: Not available (module not found)")
 
         total_time = time.time() - start_time
 
@@ -186,68 +158,17 @@ class Predictor(BasePredictor):
         print(f"   - Total frames: {total_frames}")
         print(f"   - Duration: {total_frames/fps:.2f}s")
 
-        # Create output path
+        # Create temporary directory for frames
+        frames_dir = Path(tempfile.mkdtemp()) / "frames"
+        frames_dir.mkdir(exist_ok=True)
         output_path = Path(tempfile.mkdtemp()) / "output.mp4"
 
         print(f"\nProcessing frames...")
-        print(f"\nOptimizations enabled:")
-
-        # Optimization: Determine processing resolution
-        MAX_PROCESSING_DIMENSION = 1920  # Process at 1080p max for detection
-        if max(width, height) > MAX_PROCESSING_DIMENSION:
-            scale_factor = MAX_PROCESSING_DIMENSION / max(width, height)
-            process_width = int(width * scale_factor)
-            process_height = int(height * scale_factor)
-            print(f"   [TIER 1] Downscaling: {width}x{height} -> {process_width}x{process_height} ({1/scale_factor:.1f}x faster)")
-        else:
-            scale_factor = 1.0
-            process_width = width
-            process_height = height
-            print(f"   [TIER 1] Resolution: {width}x{height} (no downscaling needed)")
-
-        # Optimization: Start FFmpeg pipe for direct streaming (no disk I/O)
-        print(f"   [TIER 1] FFmpeg pipe: Streaming mode (no disk I/O)")
-        print(f"   [TIER 1] Temporal detection: Every 5 frames (5x detection speedup)")
-        print(f"   [TIER 2] Batch processing: 8 frames per batch (better GPU utilization)")
-        print(f"   [TIER 2] Smart inpainting: Fast blur for boxes <8000px, hybrid for large boxes")
-        print(f"")
-        ffmpeg_process = subprocess.Popen([
-            'ffmpeg',
-            '-y',
-            '-f', 'rawvideo',
-            '-vcodec', 'rawvideo',
-            '-s', f'{width}x{height}',
-            '-pix_fmt', 'bgr24',
-            '-r', str(fps),
-            '-i', '-',  # Read from stdin
-            '-c:v', 'libx264',
-            '-preset', 'medium',
-            '-crf', '23',
-            '-pix_fmt', 'yuv420p',
-            '-movflags', '+faststart',
-            str(output_path)
-        ], stdin=subprocess.PIPE, stderr=subprocess.PIPE)
 
         # Process each frame
         frames_with_text = 0
         total_detections = 0
         frame_num = 0
-
-        # Profiling variables
-        import time
-        detection_time = 0
-        inpainting_time = 0
-        io_time = 0
-        resize_time = 0
-
-        # Batch processing optimization
-        BATCH_SIZE = 8  # Process 8 frames at once for better GPU utilization
-        DETECTION_INTERVAL = 5  # Run detection every N frames
-
-        frame_buffer = []
-        boxes_buffer = []
-        previous_boxes = []
-        frames_since_detection = 0
 
         try:
             while cap.isOpened():
@@ -276,33 +197,8 @@ class Predictor(BasePredictor):
                             io_time += time.time() - t3
                     break
 
-                frame_buffer.append(frame)
-
-                # Temporal + Batch detection: detect in batches every N frames
-                if frames_since_detection >= DETECTION_INTERVAL or frame_num == 0:
-                    # Downscale for detection if needed
-                    t0 = time.time()
-                    if scale_factor < 1.0:
-                        frame_small = cv2.resize(frame, (process_width, process_height), interpolation=cv2.INTER_LINEAR)
-                    else:
-                        frame_small = frame
-                    resize_time += time.time() - t0
-
-                    # Detect text on downscaled frame
-                    t1 = time.time()
-                    boxes = self._detect_onnx(frame_small, conf_threshold, iou_threshold)
-                    detection_time += time.time() - t1
-
-                    # Scale boxes back to original coordinates
-                    if scale_factor < 1.0:
-                        boxes = [[int(coord / scale_factor) for coord in box] for box in boxes]
-
-                    previous_boxes = boxes
-                    frames_since_detection = 0
-                else:
-                    # Reuse previous detections
-                    boxes = previous_boxes
-                    frames_since_detection += 1
+                # Detect text
+                boxes = self._detect_onnx(frame, conf_threshold, iou_threshold)
 
                 boxes_buffer.append(boxes)
                 frame_num += 1
@@ -316,19 +212,13 @@ class Predictor(BasePredictor):
                             frames_with_text += 1
                             total_detections += len(buf_boxes)
 
-                            # Remove text with optimized inpainting
-                            t2 = time.time()
-                            for box in buf_boxes:
-                                buf_frame = self._remove_text_optimized(buf_frame, box, method, margin)
-                            inpainting_time += time.time() - t2
+                    # Remove text
+                    for box in boxes:
+                        frame = self._remove_text(frame, box, method, margin)
 
-                        # Write frame directly to FFmpeg pipe
-                        t3 = time.time()
-                        try:
-                            ffmpeg_process.stdin.write(buf_frame.tobytes())
-                        except BrokenPipeError:
-                            raise RuntimeError("FFmpeg pipe broken - encoding failed")
-                        io_time += time.time() - t3
+                # Save frame as image
+                frame_path = frames_dir / f"frame_{frame_num:06d}.png"
+                cv2.imwrite(str(frame_path), frame)
 
                     # Progress reporting
                     if frame_num % 30 == 0 or frame_num in [1, 10, 50, 100]:
@@ -342,39 +232,48 @@ class Predictor(BasePredictor):
         except Exception as e:
             # Cleanup on error
             cap.release()
-            ffmpeg_process.stdin.close()
-            ffmpeg_process.terminate()
+            if frames_dir.exists():
+                shutil.rmtree(frames_dir)
             raise RuntimeError(f"Error during video processing at frame {frame_num}/{total_frames}: {str(e)}")
         finally:
             # Always release video capture
             cap.release()
-            # Close FFmpeg pipe
-            try:
-                ffmpeg_process.stdin.close()
-                ffmpeg_process.wait(timeout=30)
-            except:
-                ffmpeg_process.terminate()
 
-        # Performance profiling
-        total_processing_time = detection_time + inpainting_time + io_time + resize_time
-        print(f"\n   PERFORMANCE PROFILING:")
-        print(f"   - Total processing: {total_processing_time:.2f}s")
-        if total_processing_time > 0:
-            print(f"   - Detection (YOLO): {detection_time:.2f}s ({100*detection_time/total_processing_time:.1f}%)")
-            print(f"   - Inpainting (text removal): {inpainting_time:.2f}s ({100*inpainting_time/total_processing_time:.1f}%)")
-            print(f"   - I/O (FFmpeg streaming): {io_time:.2f}s ({100*io_time/total_processing_time:.1f}%)")
-            print(f"   - Resize (downscaling): {resize_time:.2f}s ({100*resize_time/total_processing_time:.1f}%)")
+        print(f"\nEncoding video with FFmpeg...")
 
-            # Calculate speedup metrics
-            frames_actually_detected = total_frames // DETECTION_INTERVAL
-            detection_savings = total_frames - frames_actually_detected
-            print(f"\n   OPTIMIZATION IMPACT:")
-            print(f"   - Detection runs: {frames_actually_detected}/{total_frames} frames ({100*frames_actually_detected/total_frames:.1f}%)")
-            print(f"   - Detection skipped: {detection_savings} frames (temporal reuse)")
-            print(f"   - Batch size: {BATCH_SIZE} frames (GPU utilization)")
-            print(f"   - Smart inpainting: Enabled (blur for small boxes)")
+        # Use FFmpeg to encode the video from frames
+        try:
+            ffmpeg_cmd = [
+                'ffmpeg',
+                '-y',  # Overwrite output file
+                '-framerate', str(fps),
+                '-i', str(frames_dir / 'frame_%06d.png'),
+                '-c:v', 'libx264',  # H.264 codec
+                '-preset', 'medium',  # Encoding speed
+                '-crf', '23',  # Quality (lower = better, 18-28 is good range)
+                '-pix_fmt', 'yuv420p',  # Pixel format for compatibility
+                '-movflags', '+faststart',  # Enable fast start for web playback
+                str(output_path)
+            ]
 
-        print(f"\n   - FFmpeg encoding completed (streaming mode)")
+            subprocess.run(
+                ffmpeg_cmd,
+                capture_output=True,
+                text=True,
+                check=True
+            )
+
+            print(f"   - Video encoded successfully with H.264")
+
+        except subprocess.CalledProcessError as e:
+            # Cleanup on error
+            if frames_dir.exists():
+                shutil.rmtree(frames_dir)
+            raise RuntimeError(f"FFmpeg encoding failed: {e.stderr}")
+        finally:
+            # Cleanup frames directory
+            if frames_dir.exists():
+                shutil.rmtree(frames_dir)
 
         # Verify output file was created successfully
         if not output_path.exists():
