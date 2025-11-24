@@ -163,6 +163,23 @@ class Predictor(BasePredictor):
         frames_dir.mkdir(exist_ok=True)
         output_path = Path(tempfile.mkdtemp()) / "output.mp4"
 
+        # Optimization: Downscale for detection
+        MAX_PROCESSING_DIMENSION = 1080
+        scale_factor = 1.0
+        process_width = width
+        process_height = height
+
+        if max(width, height) > MAX_PROCESSING_DIMENSION:
+            scale_factor = MAX_PROCESSING_DIMENSION / max(width, height)
+            process_width = int(width * scale_factor)
+            process_height = int(height * scale_factor)
+            print(f"   - Downscaling to {process_width}x{process_height} for detection (Scale: {scale_factor:.2f})")
+
+        # Optimization: Temporal detection (skip frames)
+        DETECTION_INTERVAL = 5
+        frames_since_detection = DETECTION_INTERVAL
+        previous_boxes = []
+
         print(f"\nProcessing frames...")
 
         # Process each frame
@@ -176,9 +193,26 @@ class Predictor(BasePredictor):
                 if not ret:
                     break
 
-                # Detect text
-                boxes = self._detect_onnx(frame, conf_threshold, iou_threshold)
                 frame_num += 1
+
+                # Detect text (with temporal optimization)
+                if frames_since_detection >= DETECTION_INTERVAL:
+                    # Downscale if needed
+                    if scale_factor < 1.0:
+                        frame_small = cv2.resize(frame, (process_width, process_height))
+                        current_boxes = self._detect_onnx(frame_small, conf_threshold, iou_threshold)
+                        # Scale boxes back to original coordinates
+                        if current_boxes:
+                            current_boxes = [[int(x / scale_factor) for x in box] for box in current_boxes]
+                    else:
+                        current_boxes = self._detect_onnx(frame, conf_threshold, iou_threshold)
+                    
+                    previous_boxes = current_boxes
+                    boxes = current_boxes
+                    frames_since_detection = 0
+                else:
+                    boxes = previous_boxes
+                    frames_since_detection += 1
 
                 # Update stats
                 if len(boxes) > 0:
