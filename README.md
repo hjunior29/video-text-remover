@@ -174,6 +174,17 @@ cog predict -i video=@input_video.mp4 -i method=hybrid
   - 5: Balanced (default)
   - 10-20: Aggressive removal for texts with heavy shadows/outlines
 
+### `resolution` (optional)
+- **Type**: String (choice)
+- **Default**: `720p`
+- **Options**: `original`, `1080p`, `720p`, `480p`, `360p`
+- **Description**: Internal processing resolution.
+  - `original`: Slowest, best quality.
+  - `1080p`: Fast, good quality.
+  - `720p` (Default): Very fast, recommended for most cases.
+  - `480p`/`360p`: Ultra fast, draft quality.
+- **Note**: Output video will **always** be restored to the original input resolution, regardless of this setting.
+
 ## Common Use Cases
 
 ### 1. Content Localization

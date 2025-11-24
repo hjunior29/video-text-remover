@@ -119,11 +119,19 @@ class Predictor(BasePredictor):
             description="Extra pixels to expand around detected text regions (0-20). Higher values ensure complete removal but may remove more content. Recommended: 5",
             default=5,
             ge=0,
+        ),
         resolution: str = Input(
             description="Processing resolution. Lower resolutions are significantly faster. Output will always be restored to original resolution.",
             default="720p",
             choices=["original", "1080p", "720p", "480p", "360p"],
         ),
+        detection_interval: int = Input(
+            description="Run text detection every N frames. Higher values speed up processing but may miss fast-appearing text. Recommended: 5",
+            default=5,
+            ge=1,
+            le=100,
+        ),
+
     ) -> Path:
         """Remove hardcoded text from video using AI detection and inpainting
 
@@ -210,8 +218,8 @@ class Predictor(BasePredictor):
         print(f"Processing frames with {num_workers} workers (Batch size: {BATCH_SIZE})...")
 
         # Optimization: Temporal detection (skip frames)
-        DETECTION_INTERVAL = 5
-        frames_since_detection = DETECTION_INTERVAL
+        # DETECTION_INTERVAL is now a parameter
+        frames_since_detection = detection_interval
         previous_boxes = []
         
         # Optimization: Downscale for detection (only if still high res)
@@ -259,7 +267,7 @@ class Predictor(BasePredictor):
                         frame_num += 1
                         
                         # Detect text (with temporal optimization)
-                        if frames_since_detection >= DETECTION_INTERVAL:
+                        if frames_since_detection >= detection_interval:
                             # Downscale for detection if needed
                             if det_scale_factor < 1.0:
                                 frame_small = cv2.resize(frame, (det_process_width, det_process_height))
