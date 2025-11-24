@@ -182,8 +182,10 @@ class Predictor(BasePredictor):
         previous_boxes = []
         
         # Optimization: Parallel processing
-        BATCH_SIZE = 16
-        num_workers = min(32, (os.cpu_count() or 4) * 2)  # IO/CPU bound mix
+        BATCH_SIZE = 64  # Increased for high-end CPUs
+        # Aggressive worker count for powerful CPUs (up to 128 threads)
+        cpu_count = os.cpu_count() or 4
+        num_workers = min(128, cpu_count * 4)
         
         print(f"\nProcessing frames with {num_workers} workers (Batch size: {BATCH_SIZE})...")
 
@@ -369,8 +371,14 @@ class Predictor(BasePredictor):
         if predictions is None:
             return boxes
 
-        if hasattr(predictions, 'shape') and len(predictions.shape) == 3:
-            predictions = predictions[0]
+        if hasattr(predictions, 'shape'):
+            if len(predictions.shape) == 3:
+                predictions = predictions[0]
+            
+            # Transpose if shape is [channels, anchors] (e.g. [5, 8400])
+            # YOLOv8/v11 output is usually [batch, 4+cls, anchors] -> [4+cls, anchors]
+            if predictions.shape[0] < predictions.shape[1]:
+                predictions = predictions.transpose()
 
         # Process detections
         for pred in predictions:
