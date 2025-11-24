@@ -119,7 +119,10 @@ class Predictor(BasePredictor):
             description="Extra pixels to expand around detected text regions (0-20). Higher values ensure complete removal but may remove more content. Recommended: 5",
             default=5,
             ge=0,
-            le=20,
+        resolution: str = Input(
+            description="Processing resolution. Lower resolutions are significantly faster. Output will always be restored to original resolution.",
+            default="720p",
+            choices=["original", "1080p", "720p", "480p", "360p"],
         ),
     ) -> Path:
         """Remove hardcoded text from video using AI detection and inpainting
@@ -157,18 +160,27 @@ class Predictor(BasePredictor):
         orig_width = width
         orig_height = height
         
-        # Automatic optimization: Process at max 1080p for speed
-        # The output will be restored to original resolution
-        MAX_PROCESS_HEIGHT = 1080
+        # Determine processing height
+        resolution_map = {
+            "1080p": 1080,
+            "720p": 720,
+            "480p": 480,
+            "360p": 360,
+            "original": None
+        }
+        target_height = resolution_map.get(resolution)
+        
         processing_width = width
         processing_height = height
         
-        if height > MAX_PROCESS_HEIGHT:
-            scale = MAX_PROCESS_HEIGHT / height
+        if target_height is not None and height > target_height:
+            scale = target_height / height
             processing_width = int(width * scale)
-            processing_height = MAX_PROCESS_HEIGHT
-            print(f"   - Auto-optimization: Processing at {processing_width}x{processing_height} (Original: {orig_width}x{orig_height})")
+            processing_height = target_height
+            print(f"   - Processing resolution: {processing_width}x{processing_height} ({resolution})")
             print(f"   - Output will be restored to original resolution")
+        else:
+            print(f"   - Processing at original resolution: {width}x{height}")
         
         print(f"\nVideo info:")
         print(f"   - Original Resolution: {orig_width}x{orig_height}")
