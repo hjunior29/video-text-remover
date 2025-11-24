@@ -236,6 +236,46 @@ output = replicate.run(
 
 ### Architecture
 
+```mermaid
+graph TD
+    A[Input Video] --> B[Setup: Load YOLO11 Model]
+    B --> C{Process Loop}
+    
+    subgraph "Batch Processing (64 frames)"
+        C --> D[Read Batch]
+        D --> E[Sequential Detection]
+        
+        subgraph "Detection Optimization"
+            E --> E1{Temporal Check}
+            E1 -- Skip --> E2[Reuse Previous Boxes]
+            E1 -- Detect --> E3{Resolution Check}
+            E3 -- >1080p --> E4[Downscale]
+            E3 -- <=1080p --> E5[Original Size]
+            E4 --> E6[YOLO11 Inference]
+            E5 --> E6
+            E6 --> E7[Upscale Boxes]
+        end
+        
+        E2 --> F[Parallel Inpainting]
+        E7 --> F
+        
+        subgraph "Parallel Execution (ThreadPool)"
+            F --> G1[Worker 1]
+            F --> G2[Worker 2]
+            F --> G3[Worker N]
+            G1 --> H[Remove Text]
+            G2 --> H
+            G3 --> H
+        end
+        
+        H --> I[Write Frames to Disk]
+    end
+    
+    I --> C
+    C -- Done --> J[FFmpeg Encode H.264]
+    J --> K[Output Video]
+```
+
 **Detection Model**: YOLOv8-based object detector (Fine-tuned for text detection)
 - **Version**: YOLOv8s (Small) - Proven, stable architecture
 - **Training**: Custom-trained for text and text overlay detection

@@ -153,8 +153,25 @@ class Predictor(BasePredictor):
             cap.release()
             raise ValueError(f"Invalid video properties. FPS: {fps}, Resolution: {width}x{height}, Frames: {total_frames}")
 
+        # Capture original dimensions for final output
+        orig_width = width
+        orig_height = height
+        
+        # Automatic optimization: Process at max 1080p for speed
+        # The output will be restored to original resolution
+        MAX_PROCESS_HEIGHT = 1080
+        processing_width = width
+        processing_height = height
+        
+        if height > MAX_PROCESS_HEIGHT:
+            scale = MAX_PROCESS_HEIGHT / height
+            processing_width = int(width * scale)
+            processing_height = MAX_PROCESS_HEIGHT
+            print(f"   - Auto-optimization: Processing at {processing_width}x{processing_height} (Original: {orig_width}x{orig_height})")
+            print(f"   - Output will be restored to original resolution")
+        
         print(f"\nVideo info:")
-        print(f"   - Resolution: {width}x{height}")
+        print(f"   - Original Resolution: {orig_width}x{orig_height}")
         print(f"   - FPS: {fps:.2f}")
         print(f"   - Total frames: {total_frames}")
         print(f"   - Duration: {total_frames/fps:.2f}s")
@@ -164,30 +181,41 @@ class Predictor(BasePredictor):
         frames_dir.mkdir(exist_ok=True)
         output_path = Path(tempfile.mkdtemp()) / "output.mp4"
 
-        # Optimization: Downscale for detection
-        MAX_PROCESSING_DIMENSION = 1080
-        scale_factor = 1.0
-        process_width = width
-        process_height = height
-
-        if max(width, height) > MAX_PROCESSING_DIMENSION:
-            scale_factor = MAX_PROCESSING_DIMENSION / max(width, height)
-            process_width = int(width * scale_factor)
-            process_height = int(height * scale_factor)
-            print(f"   - Downscaling to {process_width}x{process_height} for detection (Scale: {scale_factor:.2f})")
+        # Optimization: Dynamic Parallelism based on Resolution
+        total_pixels = processing_width * processing_height
+        is_high_res = total_pixels > 8000000  # > 8MP (4K)
+        
+        cpu_count = os.cpu_count() or 4
+        
+        if is_high_res:
+            BATCH_SIZE = 16
+            num_workers = min(32, cpu_count)
+            print(f"\nHigh resolution processing detected. Using conservative settings.")
+        else:
+            BATCH_SIZE = 64
+            num_workers = min(128, cpu_count * 4)
+            
+        print(f"Processing frames with {num_workers} workers (Batch size: {BATCH_SIZE})...")
 
         # Optimization: Temporal detection (skip frames)
         DETECTION_INTERVAL = 5
         frames_since_detection = DETECTION_INTERVAL
         previous_boxes = []
         
-        # Optimization: Parallel processing
-        BATCH_SIZE = 64  # Increased for high-end CPUs
-        # Aggressive worker count for powerful CPUs (up to 128 threads)
-        cpu_count = os.cpu_count() or 4
-        num_workers = min(128, cpu_count * 4)
+        # Optimization: Downscale for detection (only if still high res)
+        MAX_DETECTION_DIMENSION = 1080
+        det_scale_factor = 1.0
         
-        print(f"\nProcessing frames with {num_workers} workers (Batch size: {BATCH_SIZE})...")
+        if max(processing_width, processing_height) > MAX_DETECTION_DIMENSION:
+            det_scale_factor = MAX_DETECTION_DIMENSION / max(processing_width, processing_height)
+            det_process_width = int(processing_width * det_scale_factor)
+            det_process_height = int(processing_height * det_scale_factor)
+            print(f"   - Internal detection downscale: {det_scale_factor:.2f}")
+        else:
+            det_process_width = processing_width
+            det_process_height = processing_height
+
+        print(f"\nProcessing frames...")
 
         # Process each frame
         frames_with_text = 0
@@ -203,6 +231,11 @@ class Predictor(BasePredictor):
                         ret, frame = cap.read()
                         if not ret:
                             break
+                        
+                        # Resize to processing resolution if needed
+                        if processing_height != orig_height:
+                            frame = cv2.resize(frame, (processing_width, processing_height))
+                            
                         batch_frames.append(frame)
                     
                     if not batch_frames:
@@ -215,13 +248,13 @@ class Predictor(BasePredictor):
                         
                         # Detect text (with temporal optimization)
                         if frames_since_detection >= DETECTION_INTERVAL:
-                            # Downscale if needed
-                            if scale_factor < 1.0:
-                                frame_small = cv2.resize(frame, (process_width, process_height))
+                            # Downscale for detection if needed
+                            if det_scale_factor < 1.0:
+                                frame_small = cv2.resize(frame, (det_process_width, det_process_height))
                                 current_boxes = self._detect_onnx(frame_small, conf_threshold, iou_threshold)
-                                # Scale boxes back to original coordinates
+                                # Scale boxes back
                                 if current_boxes:
-                                    current_boxes = [[int(x / scale_factor) for x in box] for box in current_boxes]
+                                    current_boxes = [[int(x / det_scale_factor) for x in box] for box in current_boxes]
                             else:
                                 current_boxes = self._detect_onnx(frame, conf_threshold, iou_threshold)
                             
@@ -292,8 +325,14 @@ class Predictor(BasePredictor):
                 '-crf', '23',  # Quality (lower = better, 18-28 is good range)
                 '-pix_fmt', 'yuv420p',  # Pixel format for compatibility
                 '-movflags', '+faststart',  # Enable fast start for web playback
-                str(output_path)
             ]
+            
+            # Add scaling if we processed at a lower resolution
+            if processing_height != orig_height:
+                print(f"   - Upscaling output back to {orig_width}x{orig_height}...")
+                ffmpeg_cmd.extend(['-vf', f'scale={orig_width}:{orig_height}'])
+                
+            ffmpeg_cmd.append(str(output_path))
 
             subprocess.run(
                 ffmpeg_cmd,
@@ -649,8 +688,8 @@ class Predictor(BasePredictor):
         mask_y2 = y2 - cy1
         mask_local[mask_y1:mask_y2, mask_x1:mask_x2] = 255
 
-        # Inpaint with larger radius
-        roi_inpainted = cv2.inpaint(roi_expanded, mask_local, 7, cv2.INPAINT_TELEA)
+        # Inpaint with optimized radius (3 is faster than 7)
+        roi_inpainted = cv2.inpaint(roi_expanded, mask_local, 3, cv2.INPAINT_TELEA)
 
         # Copy back
         frame[y1:y2, x1:x2] = roi_inpainted[mask_y1:mask_y2, mask_x1:mask_x2]
