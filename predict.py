@@ -12,6 +12,7 @@ import tempfile
 import os
 import subprocess
 import shutil
+import concurrent.futures
 
 class Predictor(BasePredictor):
     """Video Text Remover detection and removal predictor for videos"""
@@ -179,8 +180,12 @@ class Predictor(BasePredictor):
         DETECTION_INTERVAL = 5
         frames_since_detection = DETECTION_INTERVAL
         previous_boxes = []
-
-        print(f"\nProcessing frames...")
+        
+        # Optimization: Parallel processing
+        BATCH_SIZE = 16
+        num_workers = min(32, (os.cpu_count() or 4) * 2)  # IO/CPU bound mix
+        
+        print(f"\nProcessing frames with {num_workers} workers (Batch size: {BATCH_SIZE})...")
 
         # Process each frame
         frames_with_text = 0
@@ -188,49 +193,78 @@ class Predictor(BasePredictor):
         frame_num = 0
 
         try:
-            while cap.isOpened():
-                ret, frame = cap.read()
-                if not ret:
-                    break
-
-                frame_num += 1
-
-                # Detect text (with temporal optimization)
-                if frames_since_detection >= DETECTION_INTERVAL:
-                    # Downscale if needed
-                    if scale_factor < 1.0:
-                        frame_small = cv2.resize(frame, (process_width, process_height))
-                        current_boxes = self._detect_onnx(frame_small, conf_threshold, iou_threshold)
-                        # Scale boxes back to original coordinates
-                        if current_boxes:
-                            current_boxes = [[int(x / scale_factor) for x in box] for box in current_boxes]
-                    else:
-                        current_boxes = self._detect_onnx(frame, conf_threshold, iou_threshold)
+            with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
+                while cap.isOpened():
+                    # 1. Read Batch
+                    batch_frames = []
+                    for _ in range(BATCH_SIZE):
+                        ret, frame = cap.read()
+                        if not ret:
+                            break
+                        batch_frames.append(frame)
                     
-                    previous_boxes = current_boxes
-                    boxes = current_boxes
-                    frames_since_detection = 0
-                else:
-                    boxes = previous_boxes
-                    frames_since_detection += 1
+                    if not batch_frames:
+                        break
 
-                # Update stats
-                if len(boxes) > 0:
-                    frames_with_text += 1
-                    total_detections += len(boxes)
+                    # 2. Prepare Tasks (Detection)
+                    batch_boxes = []
+                    for frame in batch_frames:
+                        frame_num += 1
+                        
+                        # Detect text (with temporal optimization)
+                        if frames_since_detection >= DETECTION_INTERVAL:
+                            # Downscale if needed
+                            if scale_factor < 1.0:
+                                frame_small = cv2.resize(frame, (process_width, process_height))
+                                current_boxes = self._detect_onnx(frame_small, conf_threshold, iou_threshold)
+                                # Scale boxes back to original coordinates
+                                if current_boxes:
+                                    current_boxes = [[int(x / scale_factor) for x in box] for box in current_boxes]
+                            else:
+                                current_boxes = self._detect_onnx(frame, conf_threshold, iou_threshold)
+                            
+                            previous_boxes = current_boxes
+                            boxes = current_boxes
+                            frames_since_detection = 0
+                        else:
+                            boxes = previous_boxes
+                            frames_since_detection += 1
+                        
+                        batch_boxes.append(boxes)
 
-                # Remove text
-                for box in boxes:
-                    frame = self._remove_text(frame, box, method, margin)
+                        # Update stats
+                        if len(boxes) > 0:
+                            frames_with_text += 1
+                            total_detections += len(boxes)
 
-                # Save frame as image
-                frame_path = frames_dir / f"frame_{frame_num:06d}.png"
-                cv2.imwrite(str(frame_path), frame)
+                    # 3. Parallel Inpainting
+                    futures = []
+                    for i, (frame, boxes) in enumerate(zip(batch_frames, batch_boxes)):
+                        if boxes:
+                            future = executor.submit(self._process_single_frame, frame, boxes, method, margin)
+                            futures.append(future)
+                        else:
+                            # No processing needed
+                            future = executor.submit(lambda f: f, frame)
+                            futures.append(future)
 
-                # Progress reporting
-                if frame_num % 30 == 0 or frame_num in [1, 10, 50, 100]:
-                    progress = (frame_num / total_frames) * 100
-                    print(f"   Progress: {frame_num}/{total_frames} frames ({progress:.1f}%) - Text detected in {frames_with_text} frames")
+                    # 4. Collect Results & Write (in order)
+                    for i, future in enumerate(futures):
+                        processed_frame = future.result()
+                        
+                        # Calculate correct frame number for filename
+                        # frame_num is currently at the end of the batch
+                        # current frame index in batch is i
+                        # start of batch was frame_num - len(batch_frames)
+                        current_frame_num = (frame_num - len(batch_frames)) + i + 1
+                        
+                        frame_path = frames_dir / f"frame_{current_frame_num:06d}.png"
+                        cv2.imwrite(str(frame_path), processed_frame)
+
+                        # Progress reporting
+                        if current_frame_num % 30 == 0 or current_frame_num in [1, 10, 50, 100]:
+                            progress = (current_frame_num / total_frames) * 100
+                            print(f"   Progress: {current_frame_num}/{total_frames} frames ({progress:.1f}%) - Text detected in {frames_with_text} frames")
 
         except Exception as e:
             # Cleanup on error
@@ -297,6 +331,12 @@ class Predictor(BasePredictor):
         print(f"   Size: {output_size / 1024 / 1024:.2f} MB")
 
         return output_path
+
+    def _process_single_frame(self, frame, boxes, method, margin):
+        """Helper for parallel processing: apply all boxes to a single frame"""
+        for box in boxes:
+            frame = self._remove_text(frame, box, method, margin)
+        return frame
 
     def _preprocess_frame(self, frame: np.ndarray, input_size: int = 640):
         """Preprocess single frame for YOLO inference"""
