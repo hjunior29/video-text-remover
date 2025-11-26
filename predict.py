@@ -128,7 +128,7 @@ class Predictor(BasePredictor):
         detection_interval: int = Input(
             description="Run text detection every N frames. Higher values speed up processing but may miss fast-appearing text. Recommended: 5",
             default=5,
-            ge=1,
+            ge=0,
             le=100,
         ),
 
