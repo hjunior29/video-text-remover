@@ -1,9 +1,7 @@
 image: r8.im/hjunior29/video-text-remover
 
 build:
-  gpu: true
-
-  python_version: "3.12"
+  gpu: false
 
   system_packages:
     - "libglib2.0-0"
@@ -12,6 +10,8 @@ build:
     - "libxrender-dev"
     - "libgomp1"
     - "ffmpeg"
+
+  python_version: "3.12"
 
   python_requirements: requirements.txt
 

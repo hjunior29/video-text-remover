@@ -287,19 +287,19 @@ graph TD
     J --> K[Output Video]
 ```
 
-**Detection Model**: YOLOv8-based object detector (Fine-tuned for text detection)
-- **Version**: YOLOv8s (Small) - Proven, stable architecture
-- **Training**: Custom-trained for text and text overlay detection
+**Detection Model**: YOLO11s object detector (Fine-tuned for text detection)
+- **Version**: YOLO11s (Small) - Latest Ultralytics architecture
+- **Training**: Custom-trained on Roboflow text-detection dataset
 - **Input**: Video frames (RGB, any resolution)
 - **Processing**: Frames resized to 640x640 with padding for inference
 - **Output**: Bounding boxes with confidence scores for text regions
-- **Advantages**: Reliable text detection with high accuracy
-- **Model Size**: 27 MB (ONNX format)
+- **Advantages**: 22% fewer parameters than YOLOv8, improved accuracy
+- **Model Size**: 37 MB (ONNX format)
 
 **Removal Methods**:
 1. **Hybrid Inpainting** (Recommended):
    - Expands detection region by 20px to capture surrounding context
-   - Uses OpenCV's TELEA algorithm with radius=7
+   - Uses OpenCV's TELEA algorithm with radius=3
    - Preserves background textures and gradients
    - Best for complex backgrounds (scenes with detail, gradients, patterns)
 
@@ -330,8 +330,8 @@ graph TD
 
 ### Training Data
 
-The YOLOv8 detection model was custom-trained for text detection:
-- **Dataset**: Custom text and text overlay dataset
+The YOLO11 detection model was custom-trained for text detection:
+- **Dataset**: Roboflow Universe text-detection-jqlql (CC BY 4.0)
 - **Text types**: Hardcoded video texts, captions, and on-screen text overlays
 - **Fonts & Styles**: Various fonts, sizes, colors, and styling (bold, outlined, shadowed)
 - **Languages**: Multi-language support (Latin, Cyrillic, Asian characters, etc.)
@@ -352,8 +352,8 @@ The YOLOv8 detection model was custom-trained for text detection:
 ### Model Format
 
 - **Framework**: ONNX Runtime (CPU/GPU auto-detection)
-- **File Size**: 27 MB
-- **Parameters**: ~9M (YOLOv8s architecture)
+- **File Size**: 37 MB
+- **Parameters**: ~9.4M (YOLO11s architecture)
 - **Input Shape**: [batch, 3, height, width] (dynamic, NCHW format)
 - **Output Shape**: Variable (depends on detections)
 - **Acceleration**: CUDA (NVIDIA GPU), TensorRT, or CPU fallback
@@ -558,9 +558,9 @@ Additional system packages:
 
 ### Technologies Used
 
-- **YOLOv8**: Ultralytics YOLO for object detection
-  - Jocher, G., Chaurasia, A., & Qiu, J. (2023). Ultralytics YOLOv8 (Version 8.0.0) [Software]. https://github.com/ultralytics/ultralytics
-  - Proven, stable architecture custom-trained for text overlay detection
+- **YOLO11**: Ultralytics YOLO for object detection
+  - Jocher, G., Chaurasia, A., & Qiu, J. (2024). Ultralytics YOLO11 [Software]. https://github.com/ultralytics/ultralytics
+  - Latest architecture with 22% fewer parameters, custom-trained for text overlay detection
 
 - **OpenCV**: Computer vision and inpainting algorithms
   - Bradski, G. (2000). The OpenCV Library. Dr. Dobb's Journal of Software Tools.
